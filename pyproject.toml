@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "a2a-mcp-bridge"
+version = "0.1.0"
+description = "MCP server that bridges MCP clients (e.g. Claude Desktop) to A2A agents, built on the current a2a-sdk protocol (0.3.26+)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["mcp", "a2a", "agent-to-agent", "model-context-protocol", "claude"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "a2a-sdk>=0.3.26",
+    "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/ytugarev/a2a-mcp-bridge"
+Issues = "https://github.com/ytugarev/a2a-mcp-bridge/issues"
+
+[project.scripts]
+a2a-mcp-bridge = "a2a_mcp_bridge.server:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/a2a_mcp_bridge"]
