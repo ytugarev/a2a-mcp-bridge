@@ -59,10 +59,11 @@ uv run --script /absolute/path/to/server.py
 
 Two environment variables, both optional:
 
-| Variable               | Default                 | Purpose                                                          |
-|------------------------|--------------------------|-------------------------------------------------------------------|
+| Variable                | Default                 | Purpose                                                          |
+|-------------------------|--------------------------|-------------------------------------------------------------------|
 | `A2A_AGENT_URL`         | `http://localhost:8001` | Default A2A agent endpoint (also overridable per tool call)      |
 | `A2A_TIMEOUT_SECONDS`   | `300`                    | HTTP client timeout — raise this for slow/long-running agents    |
+| `A2A_HEARTBEAT_SECONDS` | `15`                     | Interval between MCP progress notifications while a task runs   |
 
 ### Claude Desktop
 
@@ -110,19 +111,49 @@ actual config path: Store-installed Claude Desktop keeps it under
 ## Tools exposed
 
 - **`get_agent_card(agent_url?)`** — fetches the target agent's name,
-  description, and skills from its `/.well-known/agent.json` card.
-- **`send_a2a_message(message, agent_url?)`** — sends a message to the agent
-  and returns its final text response. Runs non-streaming so the client gets
-  one clean answer per call, even if the underlying agent takes minutes.
+  description, and skills from its `/.well-known/agent-card.json` card.
+- **`send_a2a_message(message, agent_url?, task_id?, context_id?)`** — sends a
+  message to the agent and returns its final text response. Uses A2A streaming
+  internally when the agent supports it (falling back to a blocking send
+  otherwise), but still returns one clean answer per call.
+- **`get_a2a_task(task_id, agent_url?)`** — fetches the current state and
+  result of a previously started task. The escape hatch for calls that timed
+  out after the task had already started: the task keeps running server-side,
+  and the timeout error names the `task_id` to check on.
 
-Both tools accept an optional `agent_url` override, so a single bridge
+All tools accept an optional `agent_url` override, so a single bridge
 instance can talk to multiple agents if needed.
+
+### Multi-turn conversations
+
+Every `send_a2a_message` response ends with an ids footer:
+
+```
+[a2a task_id=... context_id=...]
+```
+
+Passing those ids back as `task_id` / `context_id` on the next call continues
+the same task — which is how you answer a `[task input-required]` follow-up
+question from the agent. Omitting them starts a fresh task. The bridge itself
+stays stateless: the conversation state lives in the A2A server and the ids
+travel through the MCP client's context.
+
+### Long-running tasks and timeouts
+
+While a task runs, the bridge emits MCP progress notifications — one per A2A
+status event, plus a heartbeat every `A2A_HEARTBEAT_SECONDS` while the agent
+is silent — so MCP clients that reset their tool-call timeout on progress
+(per the MCP spec) won't kill a slow call. For agents that outlive even that,
+raise `A2A_TIMEOUT_SECONDS`, and note that a timed-out task is not lost: the
+error message includes its `task_id` for `get_a2a_task`.
 
 ## Requirements
 
 - Python 3.10+
-- An A2A server speaking `a2a-sdk` 0.3.26+ semantics (e.g. Google ADK's
-  `to_a2a`, or anything else built on the same SDK)
+- An A2A server speaking `a2a-sdk` 0.3.x semantics (e.g. Google ADK's
+  `to_a2a`, or anything else built on the same SDK). The bridge pins
+  `a2a-sdk>=0.3.26,<1.0.0`: the 1.x SDK line moved to protobuf-based types
+  and is a separate migration.
 
 ## Development
 
