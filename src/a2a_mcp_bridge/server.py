@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["mcp>=1.0.0", "a2a-sdk>=0.3.26,<1.0.0", "httpx>=0.27"]
+# dependencies = ["mcp>=1.0.0,<2.0.0", "a2a-sdk>=0.3.26,<1.0.0", "httpx>=0.27"]
 # ///
 """A2A <-> MCP bridge.
 
